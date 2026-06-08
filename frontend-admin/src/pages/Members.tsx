@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Edit2, Trash2, RefreshCw, MapPin, Calendar, Smartphone, UserCheck, Ghost, Bell } from 'lucide-react';
+import { UserPlus, Edit2, Trash2, RefreshCw, Calendar, Smartphone, UserCheck, Ghost, Bell } from 'lucide-react';
 import { membersApi } from '../services/api';
 
 const Members = () => {

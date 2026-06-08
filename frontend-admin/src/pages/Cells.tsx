@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Home, MapPin, User, Users, Plus, Trash2, RefreshCw, Search, ExternalLink, Bookmark } from 'lucide-react';
+import { Home, MapPin, User, Users, Plus, Trash2, RefreshCw, Search, ExternalLink } from 'lucide-react';
 import api from '../services/api';
 
 const Cells = () => {
