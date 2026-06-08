@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --primary: #c5a059;
+  --panel: #1e293b;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  @apply antialiased;
+}
+
+.admin-glass {
+  @apply bg-slate-900/50 backdrop-blur-md border border-slate-800;
+}
+
+.btn-primary {
+  @apply bg-[#c5a059] hover:bg-[#b38f4d] text-white px-4 py-2 rounded-lg font-medium transition-all;
+}
+
+.input-admin {
+  @apply bg-slate-800 border-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#c5a059] focus:outline-none w-full;
+}

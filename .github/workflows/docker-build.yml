@@ -1,0 +1,76 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'frontend-admin/**'
+      - 'frontend-public/**'
+      - 'docker-compose.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: cristhian-sancore
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/igrejas-backend
+
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+
+      - name: Extract metadata for Admin
+        id: meta-admin
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/igrejas-admin
+
+      - name: Build and push Admin
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend-admin
+          push: true
+          tags: ${{ steps.meta-admin.outputs.tags }}
+          labels: ${{ steps.meta-admin.outputs.labels }}
+
+      - name: Extract metadata for Public
+        id: meta-public
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/igrejas-public
+
+      - name: Build and push Public
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend-public
+          push: true
+          tags: ${{ steps.meta-public.outputs.tags }}
+          labels: ${{ steps.meta-public.outputs.labels }}

@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-jose[cryptography]
+passlib[bcrypt]
+fdb
+python-multipart
+email-validator
+httpx
+apscheduler
