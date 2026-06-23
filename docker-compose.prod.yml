@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  db:
+    image: jacobalberty/firebird:3.0
+    container_name: igrejas-db
+    restart: unless-stopped
+    ports:
+      - "3050:3050"
+    environment:
+      - ISC_PASSWORD=${ISC_PASSWORD:-masterkey}
+    volumes:
+      - db-data:/firebird/data
+
+  backend:
+    image: ghcr.io/cristhian-sancore/igrejas-backend:latest
+    container_name: igrejas-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3050
+      - DB_USER=SYSDBA
+      - DB_PASSWORD=${ISC_PASSWORD:-masterkey}
+      - DB_NAME=/firebird/data/igrejas.fdb
+    depends_on:
+      - db
+    networks:
+      - igrejas-net
+
+  frontend-admin:
+    image: ghcr.io/cristhian-sancore/igrejas-admin:latest
+    container_name: igrejas-admin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+    networks:
+      - igrejas-net
+
+  frontend-public:
+    image: ghcr.io/cristhian-sancore/igrejas-public:latest
+    container_name: igrejas-public
+    restart: unless-stopped
+    ports:
+      - "3500:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    networks:
+      - igrejas-net
+
+volumes:
+  db-data:
+
+networks:
+  igrejas-net:
+    driver: bridge
