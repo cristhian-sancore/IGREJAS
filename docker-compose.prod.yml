@@ -35,6 +35,9 @@ services:
       - S3_PUBLIC_URL=https://s3.cristhiansancore.com.br
       # Redis integration
       - REDIS_URL=redis://igrejas-redis:6379
+      # Evolution API Integration (URL Externa)
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL:-https://sua-evolution-api.com.br}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-sua_apikey}
     depends_on:
       - igrejas-db
       - igrejas-minio
@@ -65,26 +68,6 @@ services:
       - igrejas_network
 
   # --- INFRA & DEPENDENCIES ---
-  evolution-db:
-    image: postgres:15-alpine
-    container_name: igrejas-evolution-db
-    restart: always
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password123
-      POSTGRES_DB: evolution_management
-    ports:
-      - "5433:5432"
-    volumes:
-      - evolution_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d evolution_management"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - igrejas_network
-
   igrejas-minio:
     image: minio/minio
     container_name: igrejas-minio
@@ -115,38 +98,6 @@ services:
     networks:
       - igrejas_network
 
-  evolution-api:
-    image: evoapicloud/evolution-api:v2.3.7
-    container_name: igrejas-evolution-api
-    restart: always
-    ports:
-      - "8081:8080"
-    depends_on:
-      evolution-db:
-        condition: service_healthy
-      igrejas-redis:
-        condition: service_started
-    environment:
-      - SERVER_URL=http://evolution-api:8080
-      - AUTHENTICATION_API_KEY=5B3D5D1D-5B20-410F-B8F0-F643EF9E5B5D
-      - AUTHENTICATION_EXPOSE_IN_ENV=true
-      - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://admin:password123@evolution-db:5432/evolution_management?schema=evolution
-      - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
-      - REDIS_URI=redis://igrejas-redis:6379
-      - CACHE_REDIS_ENABLED=true
-      - CACHE_REDIS_URI=redis://igrejas-redis:6379
-      - CACHE_LOCAL_ENABLED=false
-      - WEBHOOK_GLOBAL_ENABLED=false
-    volumes:
-      - evolution_instances:/evolution/instances
-      - evolution_store:/evolution/store
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
-    networks:
-      - igrejas_network
-
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: igrejas-cloudflared
@@ -161,11 +112,8 @@ services:
 
 volumes:
   igrejas_firebird_data:
-  evolution_postgres_data:
   igrejas_minio_data:
   igrejas_redis_data:
-  evolution_instances:
-  evolution_store:
 
 networks:
   igrejas_network:
