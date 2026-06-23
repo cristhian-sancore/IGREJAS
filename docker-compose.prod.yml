@@ -102,7 +102,7 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: igrejas-cloudflared
     restart: always
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN:-eyJhIjoiNTliMjg0ZjliMjEyNDJhMzc4ZjRjMWY4OGY1YTU1YWMiLCJ0IjoiZjE5N2JiNGYtNmJmNi00NGNhLThmYjktNTZhZmMyY2I2MTg4IiwicyI6Ik1XWTFaamN6WlRZdFlUVXlPUzAwWVRKa0xUaGhZVGt0T0RrM09EQm1NMkkwT1RoaCJ9}
+    command: tunnel --no-autoupdate run --token eyJhIjoiNTliMjg0ZjliMjEyNDJhMzc4ZjRjMWY4OGY1YTU1YWMiLCJ0IjoiMGQyNjBjZWQtMGI0NC00NWMzLWJhNGMtNjI4ZjZiNzlhNDM5IiwicyI6Ik1HVmpNekZoTnpFdE5XVTVOeTAwTkdabUxUa3pNell0WmpkbE5qaGlNakJqTlRJNSJ9
     depends_on:
       - igrejas-public
       - igrejas-admin
