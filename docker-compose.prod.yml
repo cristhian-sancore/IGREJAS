@@ -1,59 +1,172 @@
 version: '3.8'
 
 services:
-  db:
+  # --- IGREJAS CORE ---
+  igrejas-db:
     image: jacobalberty/firebird:3.0
     container_name: igrejas-db
-    restart: unless-stopped
+    restart: always
     ports:
       - "3050:3050"
     environment:
       - ISC_PASSWORD=${ISC_PASSWORD:-masterkey}
     volumes:
-      - db-data:/firebird/data
+      - igrejas_firebird_data:/firebird/data
+    networks:
+      - igrejas_network
 
-  backend:
+  igrejas-backend:
     image: ghcr.io/cristhian-sancore/igrejas-backend:latest
     container_name: igrejas-backend
-    restart: unless-stopped
+    restart: always
     ports:
       - "8000:8000"
     environment:
-      - DB_HOST=db
+      - DB_HOST=igrejas-db
       - DB_PORT=3050
       - DB_USER=SYSDBA
       - DB_PASSWORD=${ISC_PASSWORD:-masterkey}
       - DB_NAME=/firebird/data/igrejas.fdb
+      # S3 / Minio integration
+      - S3_ENDPOINT=http://igrejas-minio:9000
+      - S3_ACCESS_KEY=admin
+      - S3_SECRET_KEY=password123
+      - S3_BUCKET=igrejas-bucket
+      - S3_PUBLIC_URL=https://s3.cristhiansancore.com.br
+      # Redis integration
+      - REDIS_URL=redis://igrejas-redis:6379
     depends_on:
-      - db
+      - igrejas-db
+      - igrejas-minio
+      - igrejas-redis
     networks:
-      - igrejas-net
+      - igrejas_network
 
-  frontend-admin:
+  igrejas-admin:
     image: ghcr.io/cristhian-sancore/igrejas-admin:latest
     container_name: igrejas-admin
-    restart: unless-stopped
+    restart: always
     ports:
       - "8080:80"
     environment:
       - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
     networks:
-      - igrejas-net
+      - igrejas_network
 
-  frontend-public:
+  igrejas-public:
     image: ghcr.io/cristhian-sancore/igrejas-public:latest
     container_name: igrejas-public
-    restart: unless-stopped
+    restart: always
     ports:
       - "3500:3000"
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     networks:
-      - igrejas-net
+      - igrejas_network
+
+  # --- INFRA & DEPENDENCIES ---
+  evolution-db:
+    image: postgres:15-alpine
+    container_name: igrejas-evolution-db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: evolution_management
+    ports:
+      - "5433:5432"
+    volumes:
+      - evolution_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d evolution_management"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - igrejas_network
+
+  igrejas-minio:
+    image: minio/minio
+    container_name: igrejas-minio
+    restart: always
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+      MINIO_SERVER_URL: "https://s3.cristhiansancore.com.br"
+      MINIO_BROWSER_REDIRECT_URL: "https://minio.cristhiansancore.com.br"
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    volumes:
+      - igrejas_minio_data:/data
+    command: server /data --console-address "0.0.0.0:9001" --address "0.0.0.0:9000"
+    networks:
+      - igrejas_network
+
+  igrejas-redis:
+    image: redis:alpine
+    container_name: igrejas-redis
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6380:6379"
+    volumes:
+      - igrejas_redis_data:/data
+    networks:
+      - igrejas_network
+
+  evolution-api:
+    image: evoapicloud/evolution-api:v2.3.7
+    container_name: igrejas-evolution-api
+    restart: always
+    ports:
+      - "8081:8080"
+    depends_on:
+      evolution-db:
+        condition: service_healthy
+      igrejas-redis:
+        condition: service_started
+    environment:
+      - SERVER_URL=http://evolution-api:8080
+      - AUTHENTICATION_API_KEY=5B3D5D1D-5B20-410F-B8F0-F643EF9E5B5D
+      - AUTHENTICATION_EXPOSE_IN_ENV=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://admin:password123@evolution-db:5432/evolution_management?schema=evolution
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
+      - REDIS_URI=redis://igrejas-redis:6379
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://igrejas-redis:6379
+      - CACHE_LOCAL_ENABLED=false
+      - WEBHOOK_GLOBAL_ENABLED=false
+    volumes:
+      - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    networks:
+      - igrejas_network
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: igrejas-cloudflared
+    restart: always
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN:-eyJhIjoiNTliMjg0ZjliMjEyNDJhMzc4ZjRjMWY4OGY1YTU1YWMiLCJ0IjoiZjE5N2JiNGYtNmJmNi00NGNhLThmYjktNTZhZmMyY2I2MTg4IiwicyI6Ik1XWTFaamN6WlRZdFlUVXlPUzAwWVRKa0xUaGhZVGt0T0RrM09EQm1NMkkwT1RoaCJ9}
+    depends_on:
+      - igrejas-public
+      - igrejas-admin
+      - igrejas-backend
+    networks:
+      - igrejas_network
 
 volumes:
-  db-data:
+  igrejas_firebird_data:
+  evolution_postgres_data:
+  igrejas_minio_data:
+  igrejas_redis_data:
+  evolution_instances:
+  evolution_store:
 
 networks:
-  igrejas-net:
+  igrejas_network:
     driver: bridge
