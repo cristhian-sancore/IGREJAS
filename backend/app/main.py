@@ -38,8 +38,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get
     """Autenticação real consultando a tabela USERS_ADMIN do Firebird."""
     if not db:
         # Fallback para desenvolvimento local caso o banco esteja inacessível
-        if form_data.username == "admin" and form_data.password == "senha123":
-            return {"access_token": create_access_token({"sub": "admin"}), "token_type": "bearer"}
+        if "admin" in form_data.username and form_data.password == "senha123":
+            return {"access_token": create_access_token({"sub": form_data.username}), "token_type": "bearer"}
         raise HTTPException(status_code=500, detail="Banco de dados inacessível")
 
     cur = db.cursor()
