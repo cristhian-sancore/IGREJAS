@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'https://apiibn.cristhiansancore.com.br',
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
 });
 
 // Interceptor para adicionar o Token JWT em todas as chamadas
